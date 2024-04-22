@@ -29,9 +29,9 @@ let quietTime = 0
 
 const graphql = JSON.stringify({
 	query: `{
-    vaultHistories(
+    priceHistories(
       where:{
-      timestamp_gt: 1
+      timestamp_gt: ${Math.floor(Date.now()/1000) - 3600*2}
       }
       orderBy: timestamp
       orderDirection: desc
@@ -40,7 +40,7 @@ const graphql = JSON.stringify({
       id
       symbol
       }
-      priceUnderlying
+      price
       timestamp
     }
   }`,
@@ -74,7 +74,7 @@ const priceCheck = async () => {
       return fetch(url, requestOptions)
         .then(response => response.json())
         .then(res => {
-          return res.data.vaultHistories;
+          return res.data.priceHistories;
         })
         .catch(error => {
           console.log('error', error);
@@ -90,20 +90,18 @@ const priceCheck = async () => {
     
           Object.keys(apiData.data[chainName]).forEach(vaultSymbol => {
             let graphData = filterDataById(apiData.data[chainName][vaultSymbol]?.vaultAddress, subgraphData);
-    
-            if (parseFloat(graphData?.priceUnderlying) / parseFloat(apiData.data[chainName][vaultSymbol].usdPrice) < (1 - FEE_LIMIT) || parseFloat(graphData?.priceUnderlying) / parseFloat(apiData.data[chainName][vaultSymbol].usdPrice) > (1 + FEE_LIMIT)) {
-              let difference = parseFloat(graphData?.priceUnderlying) / parseFloat(apiData.data[chainName][vaultSymbol].usdPrice)
+            if (parseFloat(graphData?.price) / parseFloat(apiData.data[chainName][vaultSymbol].usdPrice) < (1 - FEE_LIMIT) || parseFloat(graphData?.price) / parseFloat(apiData.data[chainName][vaultSymbol].usdPrice) > (1 + FEE_LIMIT)) {
+              let difference = parseFloat(graphData?.price) / parseFloat(apiData.data[chainName][vaultSymbol].usdPrice)
               diffData.push({
                 symbol: apiData.data[chainName][vaultSymbol].id,
                 api_price: parseFloat(apiData.data[chainName][vaultSymbol].usdPrice).toFixed(2),
-                subgraph_price: parseFloat(graphData.priceUnderlying).toFixed(2),
+                subgraph_price: parseFloat(graphData.price).toFixed(2),
                 difference: difference.toFixed(2) * 100,
                 subgraph_price_timestamp: graphData.timestamp
               });
             }
           });
         });
-    
       })
       .then( () => {
         let bSendMessage = true
