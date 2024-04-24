@@ -1,7 +1,6 @@
 require('dotenv').config()
 
 const axios = require('axios')
-const { get } = require('lodash')
 const Discord = require('discord.js')
 const client = new Discord.Client({
     partials: ['MESSAGE ']
@@ -9,9 +8,9 @@ const client = new Discord.Client({
 const chainNames = ['eth', 'matic', 'arbitrum', 'base']
 const subgraphs = {
 	eth: 'https://api.thegraph.com/subgraphs/name/harvestfi/harvest-finance',
-	matic: 'https://api.thegraph.com/subgraphs/name/harvestfi/harvest-finance-polygon',
-	arbitrum: 'https://api.thegraph.com/subgraphs/name/harvestfi/harvest-finance-arbitrum',
-	base: 'https://api.thegraph.com/subgraphs/name/harvestfi/harvest-finance-base',
+	matic: 'https://api.studio.thegraph.com/query/48757/l2-polygon-test/version/latest',
+	arbitrum: 'https://api.studio.thegraph.com/query/48757/l2-arb-test/version/latest',
+	base: 'https://api.studio.thegraph.com/query/48757/l2-base/version/latest',
 	zksync: 'https://api.studio.thegraph.com/query/48757/l2-zksync-era/version/latest',
 }
 
@@ -29,19 +28,19 @@ let quietTime = 0
 
 const graphql = JSON.stringify({
 	query: `{
-    priceHistories(
+    priceFeeds(
       where:{
-      timestamp_gt: ${Math.floor(Date.now()/1000) - 3600*2}
+        timestamp_gt: ${Math.floor(Date.now()/1000) - 3600*2}
       }
-      orderBy: timestamp
-      orderDirection: desc
+        orderBy: timestamp
+        orderDirection: desc
     ) {
-      vault {
-      id
-      symbol
-      }
-      price
-      timestamp
+        vault {
+          id
+          symbol
+        }
+        price
+        timestamp
     }
   }`,
 	variables: {},
@@ -53,11 +52,38 @@ const graphql = JSON.stringify({
 	redirect: 'follow',
   }
 
-  const filterDataById = (vaultId, data) => {
-    let result = data.filter(item => item.vault.id.toLowerCase() === vaultId.toLowerCase())
-    result.sort((a, b) => parseInt(b.timestamp) - parseInt(a.timestamp))
-    return result[0]
+const filterDataById = (vaultId, data) => {
+  let result = data.filter(item => item.vault.id.toLowerCase() === vaultId.toLowerCase())
+  result.sort((a, b) => parseInt(b.timestamp) - parseInt(a.timestamp))
+  return result[0]
+}
+
+const CHAIN_IDS = {
+  ETH_MAINNET: '1',
+  ETH_ROPSTEN: '3',
+  POLYGON_MAINNET: '137',
+  BASE: '8453',
+  ARBITRUM_ONE: '42161',
+}
+
+const getChainName = chain => {
+  let chainName = 'Ethereum'
+  switch (chain) {
+    case CHAIN_IDS.POLYGON_MAINNET:
+      chainName = 'Polygon'
+      break
+    case CHAIN_IDS.ARBITRUM_ONE:
+      chainName = 'Arbitrum'
+      break
+    case CHAIN_IDS.BASE:
+      chainName = 'Base'
+      break
+    default:
+      chainName = 'Ethereum'
+      break
   }
+  return chainName
+}
 
 const priceCheck = async () => {
   let diffData = []
@@ -74,7 +100,7 @@ const priceCheck = async () => {
       return fetch(url, requestOptions)
         .then(response => response.json())
         .then(res => {
-          return res.data.priceHistories;
+          return res.data.priceFeeds;
         })
         .catch(error => {
           console.log('error', error);
@@ -94,6 +120,8 @@ const priceCheck = async () => {
               let difference = parseFloat(graphData?.price) / parseFloat(apiData.data[chainName][vaultSymbol].usdPrice)
               diffData.push({
                 symbol: apiData.data[chainName][vaultSymbol].id,
+                address: apiData.data[chainName][vaultSymbol].vaultAddress ?? apiData.data[chainName][vaultSymbol].tokenAddress,
+                chain: getChainName(apiData.data[chainName][vaultSymbol].chain),
                 api_price: parseFloat(apiData.data[chainName][vaultSymbol].usdPrice).toFixed(2),
                 subgraph_price: parseFloat(graphData.price).toFixed(2),
                 difference: difference.toFixed(2) * 100,
@@ -123,6 +151,8 @@ const priceCheck = async () => {
           } else if(diffData.length < 5) {
             diffData.forEach(entry => {
               embed.addField('Symbol', entry.symbol, true)
+                .addField('Chain Name', entry.chain, true)
+                .addField('Address', entry.address, true)
                 .addField('API Price', entry.api_price, true)
                 .addField('Subgraph Price', entry.subgraph_price, true)
                 .addField('Price Difference', entry.difference +'%', true)
@@ -132,8 +162,8 @@ const priceCheck = async () => {
             discordChannel.send(embed)
           } else {
             const chunkedData = [];
-            for (let i = 0; i < diffData.length; i += 4) {
-              chunkedData.push(diffData.slice(i, i + 4))
+            for (let i = 0; i < diffData.length; i += 3) {
+              chunkedData.push(diffData.slice(i, i + 3))
             }
             chunkedData.forEach((chunk, index) => {
               const chunkEmbed = new Discord.MessageEmbed()
@@ -146,6 +176,8 @@ const priceCheck = async () => {
           
               chunk.forEach(entry => {
                 chunkEmbed.addField('Symbol', entry.symbol, true)
+                  .addField('Chain Name', entry.chain, true)
+                  .addField('Address', entry.address, true)
                   .addField('API Price', entry.api_price, true)
                   .addField('Subgraph Price', entry.subgraph_price, true)
                   .addField('Price Difference', entry.difference.toFixed(2) +'%', true)
@@ -177,7 +209,6 @@ const priceCheck = async () => {
 }
 
 const startPriceCheck = (channel) => {
-
 	discordChannel = channel
 	isPriceChecking = true
 	priceCheck()
@@ -189,7 +220,7 @@ const stopPriceCheck = () => {
 }
 
 client.on("ready", () => {
-	console.log("Harvest Api check bot is ready")
+	console.log("Harvest Price check bot is ready")
 	const channel = client.channels.cache.get(process.env.CHANNEL_ID)
     if (channel) {
       startPriceCheck(channel)
@@ -199,10 +230,9 @@ client.on("ready", () => {
 })
 client.on("message", msg => {
 	try {
-		if (msg.content === "/price-check-test") {
-
-			msg.reply("Harvest price check bot is active now!");
-		}
+    if (msg.content === "/price-check-test") {
+      msg.reply("Harvest price check bot is active now!");
+    }
 		else if (msg.content == "/price-check-start") {
 			startPriceCheck(msg.channel)
 			msg.channel.send('Price check started!')
