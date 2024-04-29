@@ -26,32 +26,6 @@ let isPriceChecking = false
 let discordChannel = null
 let quietTime = 0
 
-const graphql = JSON.stringify({
-	query: `{
-    priceFeeds(
-      where:{
-        timestamp_gt: ${Math.floor(Date.now()/1000) - 3600*2}
-      }
-        orderBy: timestamp
-        orderDirection: desc
-    ) {
-        vault {
-          id
-          symbol
-        }
-        price
-        timestamp
-    }
-  }`,
-	variables: {},
-  }),
-  requestOptions = {
-	method: 'POST',
-	headers: myHeaders,
-	body: graphql,
-	redirect: 'follow',
-  }
-
 const filterDataById = (vaultId, data) => {
   let result = data.filter(item => item.vault.id.toLowerCase() === vaultId.toLowerCase())
   result.sort((a, b) => parseInt(b.timestamp) - parseInt(a.timestamp))
@@ -86,6 +60,31 @@ const getChainName = chain => {
 }
 
 const priceCheck = async () => {
+  const graphql = JSON.stringify({
+    query: `{
+      priceFeeds(
+        where:{
+          timestamp_gt: ${Math.floor(Date.now()/1000) - 3600*2}
+        }
+          orderBy: timestamp
+          orderDirection: desc
+      ) {
+          vault {
+            id
+            symbol
+          }
+          price
+          timestamp
+      }
+    }`,
+    variables: {},
+    }),
+  requestOptions = {
+    method: 'POST',
+    headers: myHeaders,
+    body: graphql,
+    redirect: 'follow',
+  }
   let diffData = []
 	if (!discordChannel || !isPriceChecking) {
 		return
@@ -100,6 +99,7 @@ const priceCheck = async () => {
       return fetch(url, requestOptions)
         .then(response => response.json())
         .then(res => {
+          console.log('priceFeeds: ', res.data.priceFeeds)
           return res.data.priceFeeds;
         })
         .catch(error => {
