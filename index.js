@@ -92,8 +92,15 @@ const priceCheck = async () => {
 
 	// check vault
 	try {
-		const apiData = await axios.get(`http://api.harvest.finance/vaults?key=${API_KEY}`)
-    
+		let apiData = await axios.get(`http://api.harvest.finance/vaults?key=${API_KEY}`)
+    const filteredApiData = Object.fromEntries(
+      Object.entries(apiData.data).map(([key, value]) => [
+        key,
+        Object.fromEntries(
+          Object.entries(value).filter(([_, innerValue]) => !innerValue.inactive)
+        )
+      ])
+    )
 		const fetchPromises = chainNames.map(async (chainName) => {
       const url = subgraphs[chainName];
       return fetch(url, requestOptions)
@@ -114,15 +121,15 @@ const priceCheck = async () => {
           const chainName = chainNames[index];
           if (!subgraphData) return; // Skip if there was an error
     
-          Object.keys(apiData.data[chainName]).forEach(vaultSymbol => {
-            let graphData = filterDataById(apiData.data[chainName][vaultSymbol]?.vaultAddress, subgraphData);
-            if (parseFloat(graphData?.price) / parseFloat(apiData.data[chainName][vaultSymbol].usdPrice) < (1 - FEE_LIMIT) || parseFloat(graphData?.price) / parseFloat(apiData.data[chainName][vaultSymbol].usdPrice) > (1 + FEE_LIMIT)) {
-              let difference = parseFloat(graphData?.price) / parseFloat(apiData.data[chainName][vaultSymbol].usdPrice)
+          Object.keys(filteredApiData[chainName]).forEach(vaultSymbol => {
+            let graphData = filterDataById(filteredApiData[chainName][vaultSymbol]?.vaultAddress, subgraphData);
+            if (parseFloat(graphData?.price) / parseFloat(filteredApiData[chainName][vaultSymbol].usdPrice) < (1 - FEE_LIMIT) || parseFloat(graphData?.price) / parseFloat(filteredApiData[chainName][vaultSymbol].usdPrice) > (1 + FEE_LIMIT)) {
+              let difference = parseFloat(graphData?.price) / parseFloat(filteredApiData[chainName][vaultSymbol].usdPrice)
               diffData.push({
-                symbol: apiData.data[chainName][vaultSymbol].id,
-                address: apiData.data[chainName][vaultSymbol].vaultAddress ?? apiData.data[chainName][vaultSymbol].tokenAddress,
-                chain: getChainName(apiData.data[chainName][vaultSymbol].chain),
-                api_price: parseFloat(apiData.data[chainName][vaultSymbol].usdPrice).toFixed(2),
+                symbol: filteredApiData[chainName][vaultSymbol].id,
+                address: filteredApiData[chainName][vaultSymbol].vaultAddress ?? filteredApiData[chainName][vaultSymbol].tokenAddress,
+                chain: getChainName(filteredApiData[chainName][vaultSymbol].chain),
+                api_price: parseFloat(filteredApiData[chainName][vaultSymbol].usdPrice).toFixed(2),
                 subgraph_price: parseFloat(graphData.price).toFixed(2),
                 difference: difference.toFixed(2) * 100,
                 subgraph_price_timestamp: graphData.timestamp
