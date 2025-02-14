@@ -5,13 +5,13 @@ const Discord = require('discord.js')
 const client = new Discord.Client({
     partials: ['MESSAGE ']
 });
-const chainNames = ['eth', 'matic', 'arbitrum', 'base']
+const chainNames = ['eth', 'matic', 'arbitrum', 'base', 'zksync']
 const subgraphs = {
-	eth: 'https://api.thegraph.com/subgraphs/name/harvestfi/harvest-finance',
-	matic: 'https://api.studio.thegraph.com/query/48757/l2-polygon-test/version/latest',
-	arbitrum: 'https://api.studio.thegraph.com/query/48757/l2-arb-test/version/latest',
-	base: 'https://api.studio.thegraph.com/query/48757/l2-base/version/latest',
-	zksync: 'https://api.studio.thegraph.com/query/48757/l2-zksync-era/version/latest',
+	eth: 'https://api.studio.thegraph.com/query/48757/harvest-mainnet-test/v0.0.26',
+	matic: 'https://api.studio.thegraph.com/query/48757/l2-polygon-test/v0.0.25',
+	arbitrum: 'https://api.studio.thegraph.com/query/48757/harvest-base/v0.0.42',
+	base: 'https://api.studio.thegraph.com/query/48757/harvest-arbitrum/v0.0.33',
+	zksync: 'https://api.studio.thegraph.com/query/48757/harvest-zksync/v0.0.9',
 }
 
 const myHeaders = new Headers()
@@ -38,6 +38,7 @@ const CHAIN_IDS = {
   POLYGON_MAINNET: '137',
   BASE: '8453',
   ARBITRUM_ONE: '42161',
+  ZKSYNC: '324',
 }
 
 const getChainName = chain => {
