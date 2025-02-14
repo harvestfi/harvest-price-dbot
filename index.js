@@ -7,11 +7,11 @@ const client = new Discord.Client({
 });
 const chainNames = ['eth', 'matic', 'arbitrum', 'base', 'zksync']
 const subgraphs = {
-	eth: 'https://api.studio.thegraph.com/query/48757/harvest-mainnet-test/v0.0.26',
-	matic: 'https://api.studio.thegraph.com/query/48757/l2-polygon-test/v0.0.25',
-	arbitrum: 'https://api.studio.thegraph.com/query/48757/harvest-base/v0.0.42',
-	base: 'https://api.studio.thegraph.com/query/48757/harvest-arbitrum/v0.0.33',
-	zksync: 'https://api.studio.thegraph.com/query/48757/harvest-zksync/v0.0.9',
+	eth: 'https://api.studio.thegraph.com/query/48757/harvest-mainnet-test/version/latest',
+	matic: 'https://api.studio.thegraph.com/query/48757/l2-polygon-test/version/latest',
+	arbitrum: 'https://api.studio.thegraph.com/query/48757/harvest-base/version/latest',
+	base: 'https://api.studio.thegraph.com/query/48757/harvest-arbitrum/version/latest',
+	zksync: 'https://api.studio.thegraph.com/query/48757/harvest-zksync/version/latest',
 }
 
 const myHeaders = new Headers()
